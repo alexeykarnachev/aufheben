@@ -11,11 +11,14 @@ struct AmbientLight {
 struct DirectionalLight {
     vec3 color;
     float intensity;
+
     vec3 direction;
 };
 
 struct PointLight {
     vec3 color;
+    float intensity;
+
     vec3 position;
     vec3 attenuation;
 };
@@ -33,34 +36,56 @@ uniform PointLight point_lights[16];
 
 out vec4 finalColor;
 
+// Simple lighting implementation
+// https://ogldev.org/www/tutorial20/tutorial20.html
+
+vec3 get_light_internal(vec3 color, vec3 direction, vec3 normal, float intensity) {
+    float factor = dot(normal, -direction);
+
+    vec3 diffuse_color = vec3(0.0, 0.0, 0.0);
+
+    if (factor > 0) {
+        diffuse_color = color * intensity * factor;
+    }
+
+    return diffuse_color;
+}
+
 void main() {
     vec2 uv = fragTexCoord;
-    vec3 norm = normalize(fragNormal);
+    vec3 normal = normalize(fragNormal);
 
     // Base color
     vec3 base_color = texture(texture0, uv).rgb * colDiffuse.rgb;
 
+    // -------------------------------------------------------------------
+    // Lighting
+    vec3 total_light = vec3(0.0, 0.0, 0.0);
+
     // Ambient
-    vec3 ambient = ambient_light.color * ambient_light.intensity * base_color;
+    total_light += ambient_light.color * ambient_light.intensity;
 
     // Diffuse
-    vec3 diffuse = vec3(0.0, 0.0, 0.0);
     for (int i = 0; i < n_directional_lights; ++i) {
         DirectionalLight light = directional_lights[i];
         vec3 direction = normalize(light.direction);
-        float factor = max(dot(norm, -direction), 0.0);
-        diffuse += factor * light.color * light.intensity * base_color;
+        vec3 light_internal = get_light_internal(
+            light.color, direction, normal, light.intensity);
+        total_light += light_internal;
     }
 
     for (int i = 0; i < n_point_lights; ++i) {
         PointLight light = point_lights[i];
+        vec3 direction = normalize(fragPosition - light.position);
+        vec3 light_internal = get_light_internal(
+            light.color, direction, normal, light.intensity);
         float dist = distance(light.position, fragPosition);
         float attenuation = 1.0 / dot(light.attenuation, vec3(1.0, dist, dist * dist));
-        diffuse += light.color * attenuation;
+        total_light += light_internal * attenuation;
     }
 
     // Final color
-    vec3 color = ambient + diffuse;
+    vec3 color = total_light * base_color;
     finalColor = vec4(color, 1.0);
 }
 
