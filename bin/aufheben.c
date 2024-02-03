@@ -17,6 +17,12 @@ typedef struct DirectionalLight {
     Vector3 direction;
 } DirectionalLight;
 
+typedef struct PointLight {
+    Color color;
+    Vector3 position;
+    Vector3 attenuation;
+} PointLight;
+
 int main(void) {
     SetConfigFlags(FLAG_MSAA_4X_HINT);
     InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "Aufheben");
@@ -44,9 +50,15 @@ int main(void) {
 
     // Directional lights
     int n_directional_lights = 0;
-    DirectionalLight directional_lights[4] = {0};
+    DirectionalLight directional_lights[16] = {0};
     directional_lights[n_directional_lights++] = (DirectionalLight
     ){GOLD, 1.0, (Vector3){1.0, -1.0, -1.0}};
+
+    // Point lights
+    int n_point_lights = 0;
+    PointLight point_lights[16] = {0};
+    point_lights[n_point_lights++] = (PointLight
+    ){RED, (Vector3){10.0, 10.0, 0.0}, (Vector3){1.0, 0.045, 0.0075}};
 
     while (!WindowShouldClose()) {
         update_free_orbit_camera(&camera);
@@ -73,12 +85,12 @@ int main(void) {
         );
 
         for (int i = 0; i < n_directional_lights; ++i) {
-            DirectionalLight directional_light = directional_lights[i];
-            Vector4 directional_light_color = ColorNormalize(directional_light.color);
+            DirectionalLight light = directional_lights[i];
+            Vector4 color = ColorNormalize(light.color);
             SetShaderValueV(
                 shader,
                 GetShaderLocation(shader, TextFormat("directional_lights[%d].color", i)),
-                &directional_light_color,
+                &color,
                 SHADER_UNIFORM_VEC3,
                 1
             );
@@ -87,7 +99,7 @@ int main(void) {
                 GetShaderLocation(
                     shader, TextFormat("directional_lights[%d].intensity", i)
                 ),
-                &directional_light.intensity,
+                &light.intensity,
                 SHADER_UNIFORM_FLOAT
             );
             SetShaderValueV(
@@ -95,7 +107,7 @@ int main(void) {
                 GetShaderLocation(
                     shader, TextFormat("directional_lights[%d].direction", i)
                 ),
-                &directional_light.direction,
+                &light.direction,
                 SHADER_UNIFORM_VEC3,
                 1
             );
@@ -104,6 +116,38 @@ int main(void) {
             shader,
             GetShaderLocation(shader, "n_directional_lights"),
             &n_directional_lights,
+            SHADER_UNIFORM_INT
+        );
+
+        for (int i = 0; i < n_point_lights; ++i) {
+            PointLight light = point_lights[i];
+            Vector4 color = ColorNormalize(light.color);
+            SetShaderValueV(
+                shader,
+                GetShaderLocation(shader, TextFormat("point_lights[%d].color", i)),
+                &color,
+                SHADER_UNIFORM_VEC3,
+                1
+            );
+            SetShaderValueV(
+                shader,
+                GetShaderLocation(shader, TextFormat("point_lights[%d].position", i)),
+                &light.position,
+                SHADER_UNIFORM_VEC3,
+                1
+            );
+            SetShaderValueV(
+                shader,
+                GetShaderLocation(shader, TextFormat("point_lights[%d].attenuation", i)),
+                &light.attenuation,
+                SHADER_UNIFORM_VEC3,
+                1
+            );
+        }
+        SetShaderValue(
+            shader,
+            GetShaderLocation(shader, "n_point_lights"),
+            &n_point_lights,
             SHADER_UNIFORM_INT
         );
 
