@@ -1,4 +1,5 @@
 #include "../src/shader.h"
+#include "../src/camera.h"
 
 #include "raylib.h"
 #include "raymath.h"
@@ -27,6 +28,8 @@ int main(void) {
     model.materials[*model.meshMaterial].shader = material_shader;
 
     while (!WindowShouldClose()) {
+        update_free_orbit_camera(&camera);
+
         BeginDrawing();
         ClearBackground(RAYWHITE);
 

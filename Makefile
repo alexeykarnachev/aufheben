@@ -7,6 +7,6 @@ INCLUDES = -I./deps/include
 
 aufheben:
 	$(CC) $(CFLAGS) $(INCLUDES) -o build/$@ \
-		./bin/$@.c ./src/shader.c \
+		./bin/$@.c ./src/shader.c ./src/camera.c \
 		$(LDFLAGS) $(LIBS)
 
