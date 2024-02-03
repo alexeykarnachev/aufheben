@@ -26,7 +26,8 @@ struct PointLight {
 uniform vec4 colDiffuse;
 uniform sampler2D texture0;
 
-uniform AmbientLight ambient_light;
+uniform int n_ambient_lights;
+uniform AmbientLight ambient_lights[16];
 
 uniform int n_directional_lights;
 uniform DirectionalLight directional_lights[16];
@@ -63,7 +64,10 @@ void main() {
     vec3 total_light = vec3(0.0, 0.0, 0.0);
 
     // Ambient
-    total_light += ambient_light.color * ambient_light.intensity;
+    for (int i = 0; i < n_ambient_lights; ++i) {
+        AmbientLight light = ambient_lights[i];
+        total_light += light.color * light.intensity;
+    }
 
     // Diffuse
     for (int i = 0; i < n_directional_lights; ++i) {
