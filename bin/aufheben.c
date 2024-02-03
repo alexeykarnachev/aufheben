@@ -1,6 +1,5 @@
-#include "../src/shader.h"
 #include "../src/camera.h"
-
+#include "../src/shader.h"
 #include "raylib.h"
 #include "raymath.h"
 
@@ -43,7 +42,11 @@ int main(void) {
     ambient_light.color = WHITE;
     ambient_light.intensity = 0.3;
 
-    // Directional light
+    // Directional lights
+    int n_directional_lights = 0;
+    DirectionalLight directional_lights[4] = {0};
+    directional_lights[n_directional_lights++] = (DirectionalLight
+    ){GOLD, 1.0, (Vector3){1.0, -1.0, -1.0}};
 
     while (!WindowShouldClose()) {
         update_free_orbit_camera(&camera);
@@ -52,13 +55,59 @@ int main(void) {
         ClearBackground(DARKBLUE);
 
         BeginMode3D(camera);
-            Shader shader = model.materials[*model.meshMaterial].shader;
+        Shader shader = model.materials[*model.meshMaterial].shader;
 
-            Vector4 ambient_light_color = ColorNormalize(ambient_light.color);
-            SetShaderValueV(shader, GetShaderLocation(shader, "ambient_light.color"), &ambient_light_color, SHADER_UNIFORM_VEC3, 1);
-            SetShaderValue(shader, GetShaderLocation(shader, "ambient_light.intensity"), &ambient_light.intensity, SHADER_UNIFORM_FLOAT);
+        Vector4 ambient_light_color = ColorNormalize(ambient_light.color);
+        SetShaderValueV(
+            shader,
+            GetShaderLocation(shader, "ambient_light.color"),
+            &ambient_light_color,
+            SHADER_UNIFORM_VEC3,
+            1
+        );
+        SetShaderValue(
+            shader,
+            GetShaderLocation(shader, "ambient_light.intensity"),
+            &ambient_light.intensity,
+            SHADER_UNIFORM_FLOAT
+        );
 
-            DrawModel(model, Vector3Zero(), 1.0, WHITE);
+        for (int i = 0; i < n_directional_lights; ++i) {
+            DirectionalLight directional_light = directional_lights[i];
+            Vector4 directional_light_color = ColorNormalize(directional_light.color);
+            SetShaderValueV(
+                shader,
+                GetShaderLocation(shader, TextFormat("directional_lights[%d].color", i)),
+                &directional_light_color,
+                SHADER_UNIFORM_VEC3,
+                1
+            );
+            SetShaderValue(
+                shader,
+                GetShaderLocation(
+                    shader, TextFormat("directional_lights[%d].intensity", i)
+                ),
+                &directional_light.intensity,
+                SHADER_UNIFORM_FLOAT
+            );
+            SetShaderValueV(
+                shader,
+                GetShaderLocation(
+                    shader, TextFormat("directional_lights[%d].direction", i)
+                ),
+                &directional_light.direction,
+                SHADER_UNIFORM_VEC3,
+                1
+            );
+        }
+        SetShaderValue(
+            shader,
+            GetShaderLocation(shader, "n_directional_lights"),
+            &n_directional_lights,
+            SHADER_UNIFORM_INT
+        );
+
+        DrawModel(model, Vector3Zero(), 1.0, WHITE);
         EndMode3D();
 
         EndDrawing();

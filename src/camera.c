@@ -1,6 +1,6 @@
 #include "raylib.h"
-#include "rcamera.h"
 #include "raymath.h"
+#include "rcamera.h"
 
 void update_free_orbit_camera(Camera3D *camera) {
     static float rot_speed = 0.003f;
