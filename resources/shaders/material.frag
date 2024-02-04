@@ -3,37 +3,12 @@ in vec4 fragColor;
 in vec3 fragNormal;
 in vec3 fragPosition;
 
-struct AmbientLight {
-    vec3 color;
-    float intensity;
-};
+in vec4 directional_lights_pos[16];
 
-struct DirectionalLight {
-    vec3 color;
-    float intensity;
-
-    vec3 direction;
-};
-
-struct PointLight {
-    vec3 color;
-    float intensity;
-
-    vec3 position;
-    vec3 attenuation;
-};
 
 uniform vec4 colDiffuse;
 uniform sampler2D texture0;
 
-uniform int n_ambient_lights;
-uniform AmbientLight ambient_lights[16];
-
-uniform int n_directional_lights;
-uniform DirectionalLight directional_lights[16];
-
-uniform int n_point_lights;
-uniform PointLight point_lights[16];
 
 out vec4 finalColor;
 
@@ -71,9 +46,18 @@ void main() {
 
     // Diffuse
     for (int i = 0; i < n_directional_lights; ++i) {
+        float light_depth = texture(directional_lights_shadow_map[i], uv).r;
+        vec4 light_pos = directional_lights_pos[i];
+        vec3 light_ndc = (0.5 * light_pos.xyz / light_pos.w) + 0.5;
+        float depth = texture(directional_lights_shadow_map[i], light_ndc.xy).r;
+        float shadow = 1.0;
+        if (depth < (light_ndc.z - 0.001)) {
+            shadow = 0.0;
+        }
+
         DirectionalLight light = directional_lights[i];
         vec3 direction = normalize(light.direction);
-        vec3 light_internal = get_light_internal(
+        vec3 light_internal = shadow * get_light_internal(
             light.color, direction, normal, light.intensity);
         total_light += light_internal;
     }

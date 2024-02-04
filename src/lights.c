@@ -1,10 +1,23 @@
 #include "lights.h"
 
 #include "raylib.h"
+#include "raymath.h"
+#include "rlgl.h"
+#include "shader.h"
+#include <stdio.h>
+#include <stdlib.h>
+
+#define SHADOW_MAP_WIDTH 3000
+#define SHADOW_MAP_HEIGHT 3000
 
 #define MAX_N_AMBIENT_LIGHTS 16
 #define MAX_N_DIRECTIONAL_LIGHTS 16
 #define MAX_N_POINT_LIGHTS 16
+
+typedef struct ShadowMap {
+    unsigned int fbo;
+    unsigned int texture;
+} ShadowMap;
 
 typedef struct Light {
     Color color;
@@ -17,8 +30,8 @@ typedef struct DirectionalLight {
     Light light;
     Vector3 direction;
 
-    unsigned int fbo;
-    unsigned int shadowmap;
+    ShadowMap shadow_map;
+    Matrix vp;  // View-projection matrix from the last shadow pass
 } DirectionalLight;
 
 typedef struct PointLight {
@@ -35,7 +48,28 @@ static AmbientLight AMBIENT_LIGHTS[MAX_N_AMBIENT_LIGHTS];
 static DirectionalLight DIRECTIONAL_LIGHTS[MAX_N_DIRECTIONAL_LIGHTS];
 static PointLight POINT_LIGHTS[MAX_N_POINT_LIGHTS];
 
-void load_lights(void) {}
+static Shader SHADOW_PASS_SHADER;
+
+void load_lights(void) {
+    SHADOW_PASS_SHADER = load_shader(0, "shadow_pass.frag");
+
+    for (int i = 0; i < MAX_N_DIRECTIONAL_LIGHTS; ++i) {
+        DirectionalLight *light = &DIRECTIONAL_LIGHTS[i];
+        unsigned int *fbo = &light->shadow_map.fbo;
+        unsigned int *texture = &light->shadow_map.texture;
+
+        *fbo = rlLoadFramebuffer(-1, -1);
+        *texture = rlLoadTextureDepth(SHADOW_MAP_WIDTH, SHADOW_MAP_HEIGHT, false);
+        rlFramebufferAttach(
+            *fbo, *texture, RL_ATTACHMENT_DEPTH, RL_ATTACHMENT_TEXTURE2D, 0
+        );
+
+        if (!rlFramebufferComplete(*fbo)) {
+            TraceLog(LOG_ERROR, "Failed to create shadow map fbo");
+            exit(1);
+        }
+    }
+}
 
 void clear_ambient_lights(void) {
     N_AMBIENT_LIGHTS = 0;
@@ -77,7 +111,7 @@ bool add_directional_light(Color color, float intensity, Vector3 direction) {
     DirectionalLight *light = &DIRECTIONAL_LIGHTS[N_DIRECTIONAL_LIGHTS++];
     light->light.color = color;
     light->light.intensity = intensity;
-    light->direction = direction;
+    light->direction = Vector3Normalize(direction);
 
     return true;
 }
@@ -97,6 +131,37 @@ bool add_point_light(
     light->attenuation = attenuation;
 
     return true;
+}
+
+void draw_shadow_maps(void (*draw_scene)()) {
+    rlViewport(0, 0, SHADOW_MAP_WIDTH, SHADOW_MAP_HEIGHT);
+    for (int i = 0; i < N_DIRECTIONAL_LIGHTS; ++i) {
+        DirectionalLight *light = &DIRECTIONAL_LIGHTS[i];
+        rlBindFramebuffer(RL_DRAW_FRAMEBUFFER, light->shadow_map.fbo);
+        rlClearScreenBuffers();
+
+        Camera3D camera = {0};
+        camera.projection = CAMERA_ORTHOGRAPHIC;
+        camera.fovy = 75.0;
+        camera.position = Vector3Scale(light->direction, -100.0);
+        camera.target = Vector3Add(camera.position, light->direction);
+        camera.up = (Vector3){0.0, 1.0, 0.0};
+
+        BeginMode3D(camera);
+
+        Matrix v = rlGetMatrixModelview();
+        Matrix p = rlGetMatrixProjection();
+        light->vp = MatrixMultiply(v, p);
+
+        // rlEnableShader(SHADOW_PASS_SHADER.id);
+        // BeginShaderMode(SHADOW_PASS_SHADER);
+        draw_scene();
+        // EndShaderMode();
+        // rlDisableShader();
+        EndMode3D();
+    }
+
+    rlBindFramebuffer(RL_DRAW_FRAMEBUFFER, 0);
 }
 
 static void set_light_shader_value(
@@ -140,14 +205,25 @@ void set_lights_shader_values(Shader shader) {
     // Directional lights
     name = "directional";
     for (int i = 0; i < N_DIRECTIONAL_LIGHTS; ++i) {
-        set_light_shader_value(shader, *(Light *)&DIRECTIONAL_LIGHTS[i], name, i);
+        DirectionalLight *light = &DIRECTIONAL_LIGHTS[i];
+        set_light_shader_value(shader, *(Light *)light, name, i);
         SetShaderValueV(
             shader,
             GetShaderLocation(shader, TextFormat("directional_lights[%d].direction", i)),
-            &DIRECTIONAL_LIGHTS[i].direction,
+            &light->direction,
             SHADER_UNIFORM_VEC3,
             1
         );
+        SetShaderValueMatrix(
+            shader,
+            GetShaderLocation(shader, TextFormat("directional_lights[%d].vp", i)),
+            light->vp
+        );
+
+        rlActiveTextureSlot(1 + i);
+        rlEnableTexture(light->shadow_map.texture);
+        int loc = GetShaderLocation(shader, "directional_lights_shadow_map");
+        rlSetUniformSampler(loc + i, light->shadow_map.texture);
     }
     set_n_lights_shader_value(shader, N_DIRECTIONAL_LIGHTS, name);
 

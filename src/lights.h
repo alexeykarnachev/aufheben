@@ -27,4 +27,5 @@ bool add_ambient_light(Color color, float intensity);
 bool add_directional_light(Color color, float intensity, Vector3 direction);
 bool add_point_light(Color color, float intensity, Vector3 position, Vector3 attenuation);
 
+void draw_shadow_maps(void (*draw_scene)());
 void set_lights_shader_values(Shader shader);
