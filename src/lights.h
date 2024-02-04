@@ -16,24 +16,15 @@
 #define ATTENUATION_600 ((Vector3){1.0, 0.007, 0.0002})
 #define ATTENUATION_3250 ((Vector3){1.0, 0.0014, 0.000007})
 
-typedef struct Light {
-    Color color;
-    float intensity;
-} Light;
+void load_lights(void);
 
-typedef Light AmbientLight;
+void clear_ambient_lights(void);
+void clear_directional_lights(void);
+void clear_point_lights(void);
+void clear_lights(void);
 
-typedef struct DirectionalLight {
-    Light light;
-    Vector3 direction;
-} DirectionalLight;
+bool add_ambient_light(Color color, float intensity);
+bool add_directional_light(Color color, float intensity, Vector3 direction);
+bool add_point_light(Color color, float intensity, Vector3 position, Vector3 attenuation);
 
-typedef struct PointLight {
-    Light light;
-    Vector3 position;
-    Vector3 attenuation;
-} PointLight;
-
-void set_ambient_lights_shader_value(Shader shader, AmbientLight *lights, int n);
-void set_directional_lights_shader_value(Shader shader, DirectionalLight *lights, int n);
-void set_point_lights_shader_value(Shader shader, PointLight *lights, int n);
+void set_lights_shader_values(Shader shader);

@@ -10,6 +10,6 @@ aufheben:
 		./bin/$@.c \
 		./src/shader.c \
 		./src/camera.c \
-		./src/light.c \
+		./src/lights.c \
 		$(LDFLAGS) $(LIBS)
 

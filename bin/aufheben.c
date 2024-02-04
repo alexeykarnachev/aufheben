@@ -1,11 +1,15 @@
 #include "../src/camera.h"
-#include "../src/light.h"
+#include "../src/lights.h"
 #include "../src/shader.h"
 #include "raylib.h"
 #include "raymath.h"
+#include "rlgl.h"
 
 #define SCREEN_WIDTH 1024
 #define SCREEN_HEIGHT 768
+
+#define SHADOWMAP_WIDTH 512
+#define SHADOWMAP_HEIGHT 512
 
 int main(void) {
     SetConfigFlags(FLAG_MSAA_4X_HINT);
@@ -32,24 +36,14 @@ int main(void) {
     ground.materials[*ground.meshMaterial].shader = material_shader;
     ground.materials[*ground.meshMaterial].maps[0].color = (Color){100, 255, 90, 255};
 
-    // Ambient lights
-    int n_ambient_lights = 0;
-    AmbientLight ambient_lights[16] = {0};
-    ambient_lights[n_ambient_lights++] = (AmbientLight){WHITE, 0.1};
+    // -------------------------------------------------------------------
+    // Lighting
+    load_lights();
 
-    // Directional lights
-    int n_directional_lights = 0;
-    DirectionalLight directional_lights[16] = {0};
-    directional_lights[n_directional_lights++] = (DirectionalLight
-    ){GOLD, 1.0, (Vector3){1.0, -1.0, -1.0}};
-
-    // Point lights
-    int n_point_lights = 0;
-    PointLight point_lights[16] = {0};
-    point_lights[n_point_lights++] = (PointLight
-    ){RED, 100.0, (Vector3){10.0, 30.0, 0.0}, ATTENUATION_32};
-    point_lights[n_point_lights++] = (PointLight
-    ){BLUE, 100.0, (Vector3){-20.0, 30.0, 0.0}, ATTENUATION_32};
+    add_ambient_light(WHITE, 0.1);
+    add_directional_light(GOLD, 1.0, (Vector3){1.0, -1.0, -1.0});
+    add_point_light(RED, 100.0, (Vector3){10.0, 30.0, 0.0}, ATTENUATION_32);
+    add_point_light(BLUE, 100.0, (Vector3){-20.0, 30.0, 0.0}, ATTENUATION_32);
 
     while (!WindowShouldClose()) {
         update_free_orbit_camera(&camera);
@@ -59,13 +53,7 @@ int main(void) {
 
         BeginMode3D(camera);
 
-        set_ambient_lights_shader_value(
-            material_shader, ambient_lights, n_ambient_lights
-        );
-        set_directional_lights_shader_value(
-            material_shader, directional_lights, n_directional_lights
-        );
-        set_point_lights_shader_value(material_shader, point_lights, n_point_lights);
+        set_lights_shader_values(material_shader);
 
         DrawModel(ground, Vector3Zero(), 1.0, WHITE);
         DrawModel(model, (Vector3){0.0, 0.0, 0.0}, 1.0, WHITE);
@@ -75,6 +63,8 @@ int main(void) {
         DrawModel(model, (Vector3){15.0, 0.0, 15.0}, 1.0, WHITE);
         DrawModel(model, (Vector3){15.0, 0.0, -15.0}, 1.0, WHITE);
         EndMode3D();
+
+        DrawFPS(10, 10);
 
         EndDrawing();
     }
