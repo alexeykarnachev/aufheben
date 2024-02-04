@@ -46,13 +46,18 @@ void main() {
 
     // Diffuse
     for (int i = 0; i < n_directional_lights; ++i) {
-        float light_depth = texture(directional_lights_shadow_map[i], uv).r;
         vec4 light_pos = directional_lights_pos[i];
         vec3 light_ndc = (0.5 * light_pos.xyz / light_pos.w) + 0.5;
-        float depth = texture(directional_lights_shadow_map[i], light_ndc.xy).r;
+        vec2 light_uv = light_ndc.xy;
+
         float shadow = 1.0;
-        if (depth < (light_ndc.z - 0.001)) {
-            shadow = 0.0;
+        if (min(light_uv.x, light_uv.y) < 0.0 || max(light_uv.x, light_uv.y) > 1.0) {
+            shadow = 1.0;
+        } else {
+            float depth = texture(directional_lights_shadow_map[i], light_uv).r;
+            if (depth < (light_ndc.z - 0.0001)) {
+                shadow = 0.0;
+            }
         }
 
         DirectionalLight light = directional_lights[i];

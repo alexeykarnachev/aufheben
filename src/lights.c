@@ -7,9 +7,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#define SHADOW_MAP_WIDTH 3000
-#define SHADOW_MAP_HEIGHT 3000
-
 #define MAX_N_AMBIENT_LIGHTS 16
 #define MAX_N_DIRECTIONAL_LIGHTS 16
 #define MAX_N_POINT_LIGHTS 16
@@ -48,10 +45,10 @@ static AmbientLight AMBIENT_LIGHTS[MAX_N_AMBIENT_LIGHTS];
 static DirectionalLight DIRECTIONAL_LIGHTS[MAX_N_DIRECTIONAL_LIGHTS];
 static PointLight POINT_LIGHTS[MAX_N_POINT_LIGHTS];
 
-static Shader SHADOW_PASS_SHADER;
+static int SHADOW_MAP_SIZE = 512;
 
-void load_lights(void) {
-    SHADOW_PASS_SHADER = load_shader(0, "shadow_pass.frag");
+void load_lights(int shadow_map_size) {
+    SHADOW_MAP_SIZE = shadow_map_size;
 
     for (int i = 0; i < MAX_N_DIRECTIONAL_LIGHTS; ++i) {
         DirectionalLight *light = &DIRECTIONAL_LIGHTS[i];
@@ -59,7 +56,7 @@ void load_lights(void) {
         unsigned int *texture = &light->shadow_map.texture;
 
         *fbo = rlLoadFramebuffer(-1, -1);
-        *texture = rlLoadTextureDepth(SHADOW_MAP_WIDTH, SHADOW_MAP_HEIGHT, false);
+        *texture = rlLoadTextureDepth(SHADOW_MAP_SIZE, SHADOW_MAP_SIZE, false);
         rlFramebufferAttach(
             *fbo, *texture, RL_ATTACHMENT_DEPTH, RL_ATTACHMENT_TEXTURE2D, 0
         );
@@ -134,7 +131,8 @@ bool add_point_light(
 }
 
 void draw_shadow_maps(void (*draw_scene)()) {
-    rlViewport(0, 0, SHADOW_MAP_WIDTH, SHADOW_MAP_HEIGHT);
+    rlViewport(0, 0, SHADOW_MAP_SIZE, SHADOW_MAP_SIZE);
+
     for (int i = 0; i < N_DIRECTIONAL_LIGHTS; ++i) {
         DirectionalLight *light = &DIRECTIONAL_LIGHTS[i];
         rlBindFramebuffer(RL_DRAW_FRAMEBUFFER, light->shadow_map.fbo);
@@ -142,7 +140,7 @@ void draw_shadow_maps(void (*draw_scene)()) {
 
         Camera3D camera = {0};
         camera.projection = CAMERA_ORTHOGRAPHIC;
-        camera.fovy = 75.0;
+        camera.fovy = 50.0;
         camera.position = Vector3Scale(light->direction, -100.0);
         camera.target = Vector3Add(camera.position, light->direction);
         camera.up = (Vector3){0.0, 1.0, 0.0};

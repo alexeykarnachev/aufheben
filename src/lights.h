@@ -16,7 +16,7 @@
 #define ATTENUATION_600 ((Vector3){1.0, 0.007, 0.0002})
 #define ATTENUATION_3250 ((Vector3){1.0, 0.0014, 0.000007})
 
-void load_lights(void);
+void load_lights(int shadow_map_size);
 
 void clear_ambient_lights(void);
 void clear_directional_lights(void);

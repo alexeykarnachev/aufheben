@@ -41,7 +41,7 @@ int main(void) {
 
     // -------------------------------------------------------------------
     // Lighting
-    load_lights();
+    load_lights(512);
 
     add_ambient_light(WHITE, 0.1);
     // add_point_light(RED, 100.0, (Vector3){10.0, 30.0, 0.0}, ATTENUATION_32);
@@ -58,6 +58,8 @@ int main(void) {
 
         BeginDrawing();
         rlViewport(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+        rlEnableBackfaceCulling();
+        rlSetCullFace(RL_CULL_FACE_BACK);
         ClearBackground(DARKBLUE);
 
         BeginMode3D(camera);
